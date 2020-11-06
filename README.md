@@ -26,7 +26,7 @@ If all API calls succeed then the binlog position advances and the next batch of
 You just need to copy `.env.template` to `.env` and put in your values.  If you want to deploy to google cloud then to also copy `\environment\cdc.deploy.prod.yaml.template` to `\environment\cdc.deploy.prod.yaml`.  A fork of this will run as-is on production.
 
 # Going further
-For something production ready you should also use the API endpoint `loadHistoryScan` to make sure that your file was received and processed (snowpipe is not the friendliest API for verification as you cannot query by requestId or storage path, so it's clunky and chatty to work with - it only be queries by a date range).  I think they recognize that in their docs where they talk about rate limiting.  So, track each file upload and corresponding result.
+For something production ready you should also use the API endpoint `loadHistoryScan` to make sure that your files were received and processed. Snowpipe is not the friendliest API for verification as you cannot query by requestId or storage path, so it's clunky and chatty to work with - it only queries by date range.  I think they recognize that in their docs where they talk about rate limiting.  So, track yourself each file upload and corresponding result (optionally your Snowflake instance has a Snowflake database with useful views for loads).
 
 # Testing locally
 Google cloud functions are the same as expressjs handlers, so we can test locally.

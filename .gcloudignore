@@ -1,0 +1,19 @@
+# Ignore everything in the .gitignore:
+#!include:.gitignore
+# Do not ignore dist folder (in .gitignore) for gcloud:
+!/dist
+
+# exclude config
+.gcloudignore
+.git
+tslint.json
+tsconfig.json
+
+# NOTE: looks like the /src/* files are used by the .map (so we keep them)
+#       the /**/server.* files are removed, since they are a test harness.
+dist/src/server.*
+src/server.*
+dist/test/*
+test/*
+.vscode/*
+README.md

@@ -1,0 +1,42 @@
+## These environment variables are deployed to cloud function, if you use the script in package.json
+# They show up in cloud console under Variables -> Runtime environment variables
+## NOTE: we don't store secrets in here, just their key to lookup in a vault/secret manager
+
+# would be something like project-name-123:us-central1:database-instance-name (get it from cloud console)
+CLOUD_SQL_CONNECTION_NAME: project-name:us-central1:database-name-in-console
+# just name of mysql database (we are using binlog and checkpoint table in same database in this example).
+DB_NAME: database-name-on-server
+# user that connects to the database
+DB_USER: database-username
+# google secrets manager key name (don't store secrets themselves in environment)
+DB_PASSWORD_KEY_SECRET: key-for-database-password-lookup
+# if you want to specify a custom host (use then instead of CLOUD_SQL_CONNECTION_NAME)
+#DB_HOST=127.0.0.1
+# if you want to specify a non-standard port
+#DB_PORT=3307
+
+# Comma separated list of tables you want to synchronize
+CDC_TABLES_CSV: table1,table2
+# You may need a custom lookup depending on how you have named the pipe for each table:
+PIPE_TABLE_CONVENTION_PATTERN: myDatabase.mySchema.prefix_<TABLENAME>_suffic
+
+GOOGLE_PROJECT_ID: xxx-yyyy-12345
+# the quotes will be stripped - It's a ValidationError to not supply string values
+GOOGLE_PROJECT_NUMERIC_ID: "123456789012"
+GOOGLE_BUCKET_NAME: bucket-name
+
+## If you have an auto-ingest pipe enabled with storage notifications then you can remove the part of application that uses snowpipe.
+
+# https://<account>.<region>.<provider>.snowflakecomputing.com/
+# https://xyz1234567890.us-central1.gcp.snowflakecomputing.com/
+
+# google secrets manager key name (don't store secrets themselves in environment)
+SNOWFLAKE_PRIVATE_KEY: snowflake-pk
+# user you created to provide access to snowpipe
+SNOWFLAKE_USERNAME: snowflake-user
+# account name (you can get it from your web link)
+SNOWFLAKE_ACCOUNT: account-id
+# region deployed (I think only not needed on AWS default region)
+SNOWFLAKE_REGION_ID: us-central1
+# I think also not needed on AWS, but look in your snowflakecomputing.com URL.
+SNOWFLAKE_CLOUD_PROVIDER: gcp

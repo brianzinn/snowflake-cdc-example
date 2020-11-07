@@ -75,6 +75,7 @@ export const getBinlogBatch = async (connection: Connection, binlogName: string,
 						})
 						// this also ends the mysql connection:
 						await instance.stop();
+
 						// console.timeEnd("instance-time"); // prints twice in vscode (known bug)
 
 						const changes: Record<string, any[]> = {};
@@ -115,6 +116,7 @@ export const getBinlogBatch = async (connection: Connection, binlogName: string,
 				statement: MySQLEvents.STATEMENTS.ALL,
 				onEvent: async (event) => {
 					if (event.type === 'UPDATE' || event.type === 'INSERT') {
+						// TODO: check the initial checkpoint and make sure the same event isn't "published" twice (reduce duplication).
 						updates[tableToMonitor].push(event);
 					} else {
 						console.warn(`${tableToMonitor} unknown event:`, event.type);
@@ -127,6 +129,20 @@ export const getBinlogBatch = async (connection: Connection, binlogName: string,
 			});
 		})
 
+		instance.on(MySQLEvents.EVENTS.BINLOG, (...data: any[]) => {
+			if (Array.isArray(data) && data.length === 1) {
+				if (data[0].position && data[0].binlogName) {
+					// it's a ZongJi binlog Rotate.
+					// https://github.com/rodrigogs/zongji/blob/master/lib/binlog_event.js#L35
+					// it's quite possible that we receive no triggered events in our 30 second window and we don't want to re-process old ones.
+					// ALSO, we can get STUCK indefinitely when we are catching up and no no table events occur in `maximumDurationInSeconds` seconds.
+					// TODO: find a way to get the last binlog event, meanwhile this ensures we advance (2-4 binlog rotates/30 seconds).
+					lastPosition.name = data[0].binlogName;
+					lastPosition.position = data[0].position;
+					console.log(`binlog rotate: ${JSON.stringify(lastPosition)}.`);
+				}
+			}
+		});
 		instance.on(MySQLEvents.EVENTS.CONNECTION_ERROR, console.error);
 		instance.on(MySQLEvents.EVENTS.ZONGJI_ERROR, (error) => {
 			console.error('zongji error:', error);

@@ -1,8 +1,8 @@
 import { Connection } from "mysql";
 import { InsertFileResponse, SnowpipeAPIResponse } from "snowflake-ingest-node";
 import { convertToCsv } from "./csvConverter";
-import { endConnection, getBinlogCheckpoint, getConnection, setBinlogCheckpointCounter } from "./DatabaseConnector";
-import { getBinlogBatch } from "./getBinlogBatch";
+import { CheckpointRow, endConnection, getBinlogCheckpoint, getConnection, setBinlogCheckpointCounter } from "./DatabaseConnector";
+import { BinlogCheckpoint, getBinlogBatch } from "./getBinlogBatch";
 import { getSnowpipeAPI } from "./snowpipeAPI";
 import { CloudFile, storeToBucket } from "./storeFileToBucket";
 import { yyyymmddPathFormat } from "./TimeUtils";
@@ -24,6 +24,26 @@ export const processSingleBatch = async (databaseName: string, tablesToMonitor: 
 	const snowpipeAPI = await getSnowpipeAPI();
 
 	const connection: Connection = await getConnection();
+
+	const updateNextCheckpoint = async (checkpointName: string, nextBinlog: BinlogCheckpoint, checkpoint: CheckpointRow) => {
+		if (nextBinlog.name === undefined || nextBinlog.position === undefined) {
+			console.error(`Next binlog has missing properties: ${JSON.stringify(nextBinlog)}`);
+			return;
+		}
+
+		if (checkpoint.binlogName === nextBinlog.name && checkpoint.binlogPosition === nextBinlog.position) {
+			console.error('Next binlog checkpoint has not moved (this can happen with short run intervals and no table events.');
+			return;
+		}
+
+		const succeeded = await setBinlogCheckpointCounter(connection, checkpointName, nextBinlog.name, nextBinlog.position);
+		if (succeeded) {
+			console.log(`Successfully advanced binlog checkpoint from ${JSON.stringify(checkpoint)} to new position '${nextBinlog.name}' -> ${nextBinlog.position}`)
+		} else {
+			console.error('Failed to advance checkpoint counter');
+		}
+	}
+
 	try {
 		const checkpoint = await getBinlogCheckpoint(connection, binlogCheckpointName);
 		console.log('checkpoint is:', checkpoint);
@@ -72,15 +92,11 @@ export const processSingleBatch = async (databaseName: string, tablesToMonitor: 
 
 			if (allApiCallsAcknowledged === true) {
 				// console.log('All api calls succeeded - bumping checkpoint');
-				const succeeded = await setBinlogCheckpointCounter(connection, "example", nextBinlog.name, nextBinlog.position);
-				if (succeeded) {
-					console.log(`Successfully advanced binlog checkpoint from ${JSON.stringify(checkpoint)} to new position '${nextBinlog.name}' -> ${nextBinlog.position}`)
-				} else {
-					console.error('Failed to advance checkpoint counter');
-				}
+				await updateNextCheckpoint('example', nextBinlog, checkpoint);
 			}
 		} else {
-			console.log('No changes detected...');
+			console.log('No data changes detected.');
+			await updateNextCheckpoint('example', nextBinlog, checkpoint);
 		}
 	} catch (e) {
 		console.error(e);

@@ -24,7 +24,7 @@ export const snowflakeCDC = async (req: Request, res: Response) => {
 
   try {
     const binlogCheckpointName = 'example';
-    const BATCH_MAX_DURATION_IN_SECONDS = 30;
+    const BATCH_MAX_DURATION_IN_SECONDS = 65;
 
     const DATABASE_NAME = process.env.DB_NAME;
     const tablesToMonitor: string[] = process.env.CDC_TABLES_CSV.split(','); // NOTE: don't uses spaces or trim here

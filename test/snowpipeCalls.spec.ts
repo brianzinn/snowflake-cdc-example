@@ -15,24 +15,24 @@ describe(' > Snowflake API harness', () => {
     });
 
     // There is a vscode launch config to debug this - it is the same logic as the cloud function (there is also a launch config for a local HTTP server) :)
-    it.skip('process batches with debugger :)', async () => {
+    it('process batches with debugger :)', async () => {
         const binlogCheckpointName = 'example';
-        const BATCH_MAX_DURATION_IN_SECONDS = 30;
+        const BATCH_MAX_DURATION_IN_SECONDS = 65;
 
         const DATABASE_NAME = process.env.DB_NAME;
         const tablesToMonitor: string[] = process.env.CDC_TABLES_CSV.split(','); // NOTE: don't uses spaces or trim here
         let continueProcessing: boolean = true;
-        let currentBatch = 0;
+        let currentBatch = 1;
+        const MAX_BATCHES = 1;
 
         while (continueProcessing) {
-            currentBatch++;
             const batchOrchestrationResult: BatchOrchestrationResult = await processSingleBatch(DATABASE_NAME, tablesToMonitor, binlogCheckpointName, BATCH_MAX_DURATION_IN_SECONDS);
             // I am using google cloud scheduler to call on intervals.  So, can get behind.  One option is to add a cloud task here to get extra work done
-            // We cannot work in parallel due to nature of binlog reading.
-            // If you were writing a running process you would loop here and perhaps sleep if you were "caughtUp" or there were no updates "hasChanges === false".
-            // (serverless can get a few loops in as well) and stay under 300 seconds.
-            continueProcessing = batchOrchestrationResult.caughtUp === false && batchOrchestrationResult.hasChanges === true && currentBatch <= 3;
-            console.log(`batch #${currentBatch} continuing ${continueProcessing} -> caught up: ${batchOrchestrationResult.caughtUp}.  has changes: ${batchOrchestrationResult.hasChanges}`);
+            // We cannot work in parallel due to nature of binlog reading (maybe we could farm out 'rotate' events?).
+            // If you were writing a running process you don't need loops, but could perhaps pause when "caughtUp" or there were no updates for a duration.
+            currentBatch++;
+            continueProcessing = batchOrchestrationResult.caughtUp === false && batchOrchestrationResult.hasChanges === true && currentBatch <= MAX_BATCHES;
+            console.log(`batch #${currentBatch} continuing ${continueProcessing} -> previous batch {caughtUp: ${batchOrchestrationResult.caughtUp}, hasChanges: ${batchOrchestrationResult.hasChanges}}.`);
         }
     });
 

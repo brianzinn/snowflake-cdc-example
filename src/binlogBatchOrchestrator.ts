@@ -5,12 +5,13 @@ import { CheckpointRow, endConnection, getBinlogCheckpoint, getConnection, setBi
 import { BinlogCheckpoint, getBinlogBatch } from "./getBinlogBatch";
 import { getSnowpipeAPI } from "./snowpipeAPI";
 import { CloudFile, storeToBucket } from "./storeFileToBucket";
-import { yyyymmddPathFormat } from "./TimeUtils";
+import { fullDateFormat, yyyymmddPathFormat } from "./TimeUtils";
 import { Nullable } from "./types";
 
 export type BatchOrchestrationResult = {
 	caughtUp: boolean
 	hasChanges: boolean
+	lastEventTimestamp?: number
 }
 
 const PATH_SEPARATOR = '/';
@@ -20,6 +21,10 @@ export const processSingleBatch = async (databaseName: string, tablesToMonitor: 
 		caughtUp: true,
 		hasChanges: true
 	};
+
+	if (maxDurationInSeconds <= 60) {
+		console.warn('Batches 60 seconds or less may have no binlog progression (table row or rotate events).')
+	}
 
 	const snowpipeAPI = await getSnowpipeAPI();
 
@@ -32,7 +37,7 @@ export const processSingleBatch = async (databaseName: string, tablesToMonitor: 
 		}
 
 		if (checkpoint.binlogName === nextBinlog.name && checkpoint.binlogPosition === nextBinlog.position) {
-			console.error('Next binlog checkpoint has not moved (this can happen with short run intervals and no table events.');
+			console.error('Next binlog checkpoint has not moved (this can happen with short run intervals and no table events or binlog rotate events).');
 			return;
 		}
 
@@ -46,12 +51,13 @@ export const processSingleBatch = async (databaseName: string, tablesToMonitor: 
 
 	try {
 		const checkpoint = await getBinlogCheckpoint(connection, binlogCheckpointName);
-		console.log('checkpoint is:', checkpoint);
+		console.log(`checkpoint is: ${JSON.stringify(checkpoint)}`);
 
 		const batchResults = await getBinlogBatch(connection, checkpoint.binlogName, checkpoint.binlogPosition, tablesToMonitor, databaseName, maxDurationInSeconds);
 		const { nextBinlog, changes, lastTimestamp } = batchResults;
 		batchOrchestrationResult.hasChanges = batchResults.hasChanges;
 		batchOrchestrationResult.caughtUp = batchResults.caughtUp;
+		batchOrchestrationResult.lastEventTimestamp = batchResults.lastTimestamp;
 
 		if (batchOrchestrationResult.hasChanges) {
 			// NOTE: that snowflake doesn't let you know if there are downstream errors via permissions/misconfiguration, but you can see in
@@ -103,6 +109,10 @@ export const processSingleBatch = async (databaseName: string, tablesToMonitor: 
 		throw e;
 	} finally {
 		await endConnection(connection);
+	}
+
+	if (!batchOrchestrationResult.caughtUp && batchOrchestrationResult.lastEventTimestamp) {
+		console.log(`behind: last event: ${fullDateFormat(new Date(batchOrchestrationResult.lastEventTimestamp))}.`)
 	}
 	return batchOrchestrationResult;
 }

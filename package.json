@@ -5,7 +5,7 @@
   "description": "Change data capture to snowflake via snowpipe example",
   "main": "dist/src/index.js",
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=12.0.0"
   },
   "scripts": {
     "prebuild": "tslint -c tslint.json -p tsconfig.json",
@@ -16,8 +16,8 @@
     "unit-test": "mocha --require ts-node/register test/**/*.spec.ts --timeout=8000 --exit",
     "test": "npm run unit-test",
     "test:coverage": "nyc --reporter=lcov --reporter=text-summary npm run test",
-    "predeploy:function-snowflake-cdc": "npm run build",
-    "deploy:function-snowflake-cdc": "gcloud functions deploy function-snowflake-cdc --runtime nodejs12 --trigger-http --entry-point snowflakeCDC --timeout 300 --env-vars-file environment/cdc.deploy.prod.yaml"
+    "predeploy": "npm run build",
+    "deploy": "gcloud functions deploy function-snowflake-cdc --runtime nodejs12 --trigger-http --entry-point snowflakeCDC --timeout 300 --memory 8192MB --env-vars-file environment/cdc.deploy.prod.yaml"
   },
   "repository": {
     "type": "git",

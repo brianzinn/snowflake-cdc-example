@@ -15,8 +15,9 @@ describe(' > Snowflake API harness', () => {
     });
 
     // There is a vscode launch config to debug this - it is the same logic as the cloud function (there is also a launch config for a local HTTP server) :)
-    it('process batches with debugger :)', async () => {
+    it.skip('process batches with debugger :)', async () => {
         const binlogCheckpointName = 'example';
+        const BATCH_MIN_DURATION_IN_SECONDS = 30;
         const BATCH_MAX_DURATION_IN_SECONDS = 65;
 
         const DATABASE_NAME = process.env.DB_NAME;
@@ -26,7 +27,7 @@ describe(' > Snowflake API harness', () => {
         const MAX_BATCHES = 1;
 
         while (continueProcessing) {
-            const batchOrchestrationResult: BatchOrchestrationResult = await processSingleBatch(DATABASE_NAME, tablesToMonitor, binlogCheckpointName, BATCH_MAX_DURATION_IN_SECONDS);
+            const batchOrchestrationResult: BatchOrchestrationResult = await processSingleBatch(DATABASE_NAME, tablesToMonitor, binlogCheckpointName, BATCH_MIN_DURATION_IN_SECONDS, BATCH_MAX_DURATION_IN_SECONDS);
             // I am using google cloud scheduler to call on intervals.  So, can get behind.  One option is to add a cloud task here to get extra work done
             // We cannot work in parallel due to nature of binlog reading (maybe we could farm out 'rotate' events?).
             // If you were writing a running process you don't need loops, but could perhaps pause when "caughtUp" or there were no updates for a duration.

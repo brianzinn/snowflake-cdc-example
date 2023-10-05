@@ -27,9 +27,9 @@ export const snowflakeCDC = async (req: Request, res: Response) => {
     // TODO: store an increasing duration to the database, so to increase when nothing is found and return back to a lower number when rows are found.
     const BATCH_MIN_DURATION_IN_SECONDS = 40;
 
-    // this function is scheduled every 6 minutes - 300 + buffer < 360
+    // this function is scheduled every 8 minutes - 420 + buffer < 480
     // NOTE: 200 seconds was NOT enough at one point to catch even a single change and we incurred data loss as it was not monitored and the binlog was rotated out.
-    const BATCH_MAX_DURATION_IN_SECONDS = 300;
+    const BATCH_MAX_DURATION_IN_SECONDS = 420;
 
     const DATABASE_NAME = process.env.DB_NAME;
     const tablesToMonitor: string[] = process.env.CDC_TABLES_CSV.split(','); // NOTE: don't uses spaces or trim here

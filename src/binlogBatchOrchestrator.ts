@@ -1,11 +1,11 @@
 import { Connection } from "mysql";
 import { InsertFileResponse, SnowpipeAPIResponse } from "snowflake-ingest-node";
 import { convertToCsv } from "./csvConverter";
-import { CheckpointRow, endConnection, getBinlogCheckpoint, getConnection, setBinlogCheckpointCounter } from "./DatabaseConnector";
+import { CheckpointRow, endConnection, getBinlogCheckpoint, getConnection, setBinlogCheckpointCounter } from "./databaseConnector";
 import { BinlogCheckpoint, getBinlogBatch } from "./getBinlogBatch";
 import { getSnowpipeAPI } from "./snowpipeAPI";
 import { CloudFile, storeToBucket } from "./storeFileToBucket";
-import { fullDateFormat, yyyymmddPathFormat } from "./TimeUtils";
+import { fullDateFormat, yyyymmddPathFormat } from "./timeUtils";
 import { Nullable } from "./types";
 
 export type BatchOrchestrationResult = {

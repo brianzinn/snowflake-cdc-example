@@ -20,8 +20,18 @@ export type BatchResults = {
  * NOTE: If you fall behind, you will get this error:
  * zongji error: Error: ER_MASTER_FATAL_ERROR_READING_BINLOG: Could not find first log file name in binary log index file
  * This means you fell behind and your binlog position has been removed (SHOW BINLOGS will no longer have your checkpoint position file).
+ *
+ * NOTE: If your binlog file is too large, you will get this error:
+ * log event entry exceeded max_allowed_packet; Increase max_allowed_packet on master; the first event 'mysql-bin.???' at 2147483647
+ * If you look at the log it may be too large.  Then you need to manually advance past that if your cloud sql doesn't support increasing.
+ *
+ * SHOW BINARY LOGS
+ * ------------------------------
+ * mysql-bin.151511 | 1501121288
+ * mysql-bin.151512 | 24258658417
+ *
  */
-export const getBinlogBatch = async (connection: Connection, binlogName: string, binlogNextPos: number, tablesToMonitor: string[], databaseName: string, minimumDurationInDeconds: number, maximumDurationInSeconds: number): Promise<BatchResults> => {
+export const getBinlogBatch = async (connection: Connection, binlogName: string, binlogNextPos: number, tablesToMonitor: string[], databaseName: string, minimumDurationInSeconds: number, maximumDurationInSeconds: number): Promise<BatchResults> => {
   // https://github.com/rodrigogs/zongji#zongji-class
   const zongjiOptions: ZongjiOptions = {
     serverId: 2, // you need a unique ID for every binlog slave
@@ -41,7 +51,7 @@ export const getBinlogBatch = async (connection: Connection, binlogName: string,
     const lastPosition: BinlogCheckpoint = {};
 
     const startTimeMillis = new Date().getTime()
-    const MIN_DURATION_MILLIS = minimumDurationInDeconds * 1000;
+    const MIN_DURATION_MILLIS = minimumDurationInSeconds * 1000;
     const MAX_DURATION_MILLIS = maximumDurationInSeconds * 1000;
     let shuttingDown = false;
     let caughtUp = false;
@@ -135,6 +145,7 @@ export const getBinlogBatch = async (connection: Connection, binlogName: string,
           if (event.type === 'UPDATE' || event.type === 'INSERT') {
             updates[tableToMonitor].push(event);
           } else {
+            // ie: your_table unknown event: {"type":"DELETE","schema":"your_schema","table":"your_table","affectedRows":[{"before":....
             console.warn(`${tableToMonitor} unknown event:`, event.type);
           }
 
